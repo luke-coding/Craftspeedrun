@@ -1,0 +1,522 @@
+on load:
+	broadcast ""
+	broadcast "by &aDragondy"
+	broadcast ""
+	suppress the variable save warnings
+
+command /reset:
+	trigger:
+		delete {telearrow::%player%}
+		kill {telearrow::%player%}
+		delete {telebow::%player%}
+		delete {telecool::%player%}
+		loop all players:
+			delete {Ward limit::%loop-player%}
+			delete {alre::%loop-player%}
+
+command /craftspeedrun <text> [<offline player>]:
+	aliases: /cs
+	trigger:
+		if arg 1 is "hunter":
+			if arg 2 is set:
+				if sender isn't op or console:
+					message "&c이 명령어를 사용할 수 없습니다!"
+					stop
+				if {hunter::*} contains arg 2:
+					message "&c그 플레이어는 이미 헌터입니다"
+					stop
+				remove arg 2 from {runner::*}
+				message "%arg 2%님을 헌터에 추가했습니다"
+				message "%player%님이 당신을 헌터에 추가했습니다" to arg 2
+				add arg 2 to {hunter::*}
+			if arg 2 isn't set:
+				if {hunter::*} contains player:
+					message "&c당신은 이미 헌터입니다"
+					stop
+				remove player from {runner::*}
+				message "당신을 헌터에 추가했습니다"
+				add player to {hunter::*}
+		if arg 1 is "runner":
+			if arg 2 is set:
+				if sender isn't op or console:
+					message "&c이 명령어를 사용할 수 없습니다!"
+					stop
+				if {runner::*} contains arg 2:
+					message "&c그 플레이어는 이미 헌터입니다"
+					stop
+				remove arg 2 from {hunter::*}
+				message "%arg 2%님을 러너에 추가했습니다"
+				message "%player%님이 당신을 러너에 추가했습니다" to arg 2
+				add arg 2 to {runner::*}
+			if arg 2 isn't set:
+				if {hunter::*} contains player:
+					message "&c당신은 이미 러너입니다"
+					stop
+				remove player from {hunter::*}
+				message "당신을 러너에 추가했습니다"
+				add player to {runner::*}
+		if arg 1 is "remove":
+			if arg 2 is set:
+				if sender isn't op or console:
+					message "&c이 명령어를 사용할 수 없습니다!"
+					stop
+				remove arg 2 from {runner::*}
+				remove arg 2 from {hunter::*}
+				message "%arg 2%님을 모든 역할에서 제거했습니다"
+				message "%player%님이 당신을 모든 역할에서 제거했습니다" to arg 2
+			if arg 2 isn't set:
+				remove player from {runner::*}
+				remove player from {hunter::*}
+				message "당신을 모든 역할에서 제거했습니다"
+		if arg 1 is "start":
+			delete {hunter}
+			delete {runner}
+			loop all players:
+				if {hunter::*} contains loop-player:
+					set {hunter} to true
+				if {runner::*} contains loop-player:
+					set {runner} to true
+			if {hunter} isn't set:
+				message "&c헌터가 없습니다"
+				stop
+			if {runner} isn't set:
+				message "&c러너가 없습니다"
+				stop
+			execute console command "/mv delete cs"
+			execute console command "/mv confirm"
+			execute console command "/mv create cs normal"
+			
+			send title "월드가 만들어지는 중입니다" with subtitle "&e잠시만 기다려 주십시오" to all players
+			
+			wait 10 seconds
+			
+			add "start" to the scoreboard tags of {hunter::*}
+			add "start" to the scoreboard tags of {runner::*}
+			
+			execute console command "/execute in cs run gamerule keepInventory true"
+			execute console command "/execute in cs run gamerule spectatorsGenerateChunks false"
+			execute console command "/execute in cs run gamerule sendCommandFeedback false"
+			execute console command "/execute in cs run worldborder damage amount 10"
+			execute console command "/execute in cs run worldborder set 2000 10"
+			execute console command "/execute in cs run worldborder damage buffer 5"
+			execute console command "/execute in cs run tp @a 0 100 0"
+			execute console command "/execute in cs run setworldspawn 0 100 0"
+			execute console command "/execute in cs run spreadplayers 0 0 500 1000 false @a[tag=start]"
+			
+			remove "start" from the scoreboard tags of {hunter::*}
+			remove "start" from the scoreboard tags of {runner::*}
+			
+			heal all players
+			
+			loop all players:
+				message "지금 당신이 있는 월드는 %loop-player's world%입니다" to player
+			
+			set {runnercount} to 0
+			set {playingrunner::*} to {runner::*}
+			loop all players:
+				if {runner::*} contains player:
+					add 1 to {runnercount}
+		if arg 1 is "stop":
+			delete {playingrunner::*}
+			set {runnercount} to -1
+		if arg 1 is "delete":
+			execute console command "/mv delete cs"
+			execute console command "/mv confirm"
+
+on respawn:
+	randomtp(player)
+
+function randomtp(p: player):
+	if {_p}'s world isn't "cs":
+		stop
+	while true:
+		set {POSITION} to location at random number between 1000 and -1000, 60, random number between 1000 and -1000 in {_p}'s world
+		loop blocks above {POSITION}:
+			if loop-block and block above loop-block are air:
+				if block under loop-block is sand or dirt or grass block or terracotta or ice or red sand:
+					set {POSITION} to location of loop-block
+					teleport {_p} to {POSITION}
+					stop
+				else:
+					randomtp({_p})
+					stop
+
+on place of beacon:
+	send title "&c러너가 목표를 달성했습니다!" with subtitle "&b러너 승리!" to all players
+
+command /sethome:
+	trigger:
+		if {loc::%player%} is not set:
+			message "home이 지정되었습니다"
+			set {loc::%player%} to player's location
+			stop
+		if {loc::%player%} is set:
+			message "새로운home이 지정되었습니다"
+			delete {loc::%player%}
+			set {loc::%player%} to player's location
+
+command /Ward <text> [<offline player>]:
+	aliases: /wa
+	trigger:
+		if {hunter::*} doesn't contain player:
+			message "&c당신은 이 명령어를 사용할 수 없습니다!"
+			stop
+		if arg 1 is "install" or "ist" or "i":
+			if {Ward limit::%player%} isn't set:
+				spawn an armor stand at the player
+				set {Ward::%player%} to last spawned armor stand
+				add "{DisabledSlots:2039583}" to entity-nbt of last spawned armor stand
+				add "{Invisible:true}" to entity-nbt of last spawned armor stand
+				add "{Invulnerable:1b}" to entity-nbt of last spawned armor stand
+				set {Ward limit::%player%} to true
+				play sound "block.anvil.use" with pitch 2 for player
+				message "&b와드를 성공적으로 설치했습니다"
+			else:
+				message "&c이미 와드를 한번 설치했습니다"
+		if arg 1 is "teleport" or "tel" or "t":
+			if arg 2 is not set:
+				message "&c이동할 와드을 설치한 플레이어의 이름을 써주세요"
+				stop
+			if {Ward::%arg 2%} isn't set:
+				if {Broken Ward::%arg 2%} isn't set:
+					message "&c그 와드를 찾을 수 없습니다!"
+					stop
+				else:
+					set {wardloc::%player%} to {loc::%player%}
+					set {loc::%player%} to {Broken Ward::%arg 2%}'s location
+					goback(player, "confirm")
+			else:
+				set {wardloc::%player%} to {loc::%player%}
+				set {loc::%player%} to {Ward::%arg 2%}'s location
+				goback(player, "confirm")
+		if arg 1 is "location" or "loc" or "l":
+			if arg 2 is not set:
+				message "&c와드을 설치한 플레이어의 이름을 써주세요"
+				stop
+			if {Ward::%arg 2%} isn't set:
+				if {Broken Ward::%arg 2%} isn't set:
+					message "&c그 와드를 찾을 수 없습니다!"
+					stop
+				else:
+					message "&c부셔진 와드는 위치를 확인할 수 없습니다!"
+			else:
+				message "와드의 위치: %{Ward::%arg 2%}'s location%"
+
+every a tick:
+	loop all players:
+		if {Ward::%loop-player%} is set:
+			play 1 of dust using dustOption(red, 3) at {Ward::%loop-player%} for {hunter::*}
+			loop all entities in radius 10 of {Ward::%loop-player%}:
+				if {runner::*} contains loop-entity-2:
+					broadcast "&c[전체 알림] %loop-entity-2%가 와드에 의해 발각되었습니다!"
+					loop {hunter::*}:
+						message "&b[헌터 알림] %loop-player%님의 와드에 의해 발각되었습니다" to loop-value-3
+					broadcast "&c[전체 알림] 러너 %loop-entity-2%님의 위치는 %loop-entity-2's location% 입니다"
+					message "&e[개인 알림] %loop-player%님이 설치한 와드는 100초후에 파괴됩니다!" to loop-player
+					apply glowing to loop-entity-2 for 100 seconds
+					set {Broken Ward::%loop-player%} to {Ward::%loop-player%}
+					delete {Ward::%loop-player%}
+					set {Ward Broken times::%loop-player%} to 100
+					add "{CustomNameVisible:1b}" to entity-nbt of {Broken Ward::%loop-player%}
+					while true:
+						add "{Invulnerable:1b}" to entity-nbt of {Broken Ward::%loop-player%}
+						add "{Invisible:false}" to entity-nbt of {Broken Ward::%loop-player%}
+						add "{CustomName:'{""text"":""%{Ward Broken times::%loop-player%}%""}'}" to entity-nbt of {Broken Ward::%loop-player%}
+						add -1 to {Ward Broken times::%loop-player%}
+						if {Ward Broken times::%loop-player%} < -0.5:
+							create a fake explosion at {Broken Ward::%loop-player%}
+							kill {Broken Ward::%loop-player%}
+							delete {Broken Ward::%loop-player%}
+							delete {Ward Broken times::%loop-player%}
+							stop
+						wait a seconds
+
+on sneak toggle:
+	if player is not sneaking:
+		set {w::%player%} to true
+	if player is sneaking:
+		delete {w::%player%}
+
+on damage:
+	if victim is player:
+		loop 20 times:
+			set {d::%victim%} to true
+			wait a tick
+		delete {d::%victim%}
+
+on damage:
+	if {hunter::*} doesn't contain attacker:
+		stop
+	if {runner::*} doesn't contain victim:
+		stop
+	loop 200 times:
+		set {hunted::%victim%} to true
+		wait a tick
+	delete {hunted::%victim%}
+
+on death of player:
+	if {playingrunner::*} contains victim:
+		if {hunted::%victim%} is set:
+			cancel event
+			set victim's gamemode to spectator
+			broadcast "&4%victim%님이 사망했습니다!"
+			remove player from {playingrunner::*}
+			add -1 to {runnercount}
+			send title "&c이런!" with subtitle "당신은 탈락했습니다" to player
+			if {runnercount} is 0:
+				send title "&c러너가 모두 사망했습니다" with subtitle "&b헌터가 승리했습니다" to all players
+		else:
+			cancel event
+			broadcast "&4%victim%님이 자연사 했습니다"
+			broadcast "&b%victim%님이 부활했습니다(사유: 자연사)"
+			broadcast "&4%victim%님의 위치가 전송되었습니다"
+			broadcast "-------------------------------"
+			broadcast "&b%victim%님의 위치: %victim's location%"
+			broadcast "-------------------------------"
+
+on shoot:
+	if {hunter::*} doesn't contain shooter:
+		stop
+	if shooter's tool isn't bow:
+		stop
+	if {telecool::%shooter%} is set:
+		stop
+	if {w::%shooter%} isn't set:
+		stop
+	set {telecool::%shooter%} to {telecool}
+	set {telebow::%shooter%} to true
+	set {telearrow::%shooter%} to projectile
+	add "{pickup:0b}" to entity-nbt of {telearrow::%shooter%}
+	while true:
+		if {telebow::%shooter%} isn't set:
+			stop
+		if {telearrow::%shooter%} is on ground:
+			stop this loop
+		send action bar "&a화살이 공중에 있습니다 (화살 텔레포트 작동됨)" to shooter
+		wait a tick
+	set {teletime::%shooter%} to 4
+	loop 80 times:
+		send action bar "&b좌클릭으로 화살로 텔레포트 할 수 있습니다! (남은시간: %ceil({teletime::%shooter%})%)" to shooter
+		wait 1 tick
+		add -0.05 to {teletime::%shooter%}
+		if {telebow::%shooter%} isn't set:
+			stop
+	send action bar "&c시간이 초과되었습니다" to shooter
+	kill {telearrow::%shooter%}
+	delete {telebow::%shooter%}
+	delete {telecool::%shooter%}
+
+on damage:
+	if {telebow::%attacker%} isn't set:
+		stop
+	if {hunter::*} contains victim:
+		cancel event
+	if event-projectile isn't {telearrow::%attacker%}:
+		stop
+	delete {telebow::%attacker%}
+	set {teletime::%attacker%} to 0.5
+	loop 5 times:
+		send action bar "&e맞은 플레이어에게 텔레포트 하는중 (남은시간: %{teletime::%attacker%}%)" to attacker
+		wait 0.1 seconds
+		add -0.1 to {teletime::%attacker%}
+	play 1 of flash at location of attacker
+	apply speed to attacker for 5 seconds
+	teleport attacker to victim
+	play 1 of flash at location of victim
+	play sound "entity.enderman.teleport" with pitch 2 at victim
+	kill {telearrow::%attacker%}
+	while true:
+		add -1 to {telecool::%attacker%}
+		if {telecool::%attacker%} < -0.5:
+			message "&b이제 화살 텔레포트를 사용할 수 있습니다!" to attacker
+			delete {telecool::%attacker%}
+			stop
+		if attacker's tool is bow:
+			send action bar "&c화살 텔레포트 남은 시간: %{telecool::%attacker%}%" to attacker
+		wait 1 seconds
+	
+	
+on leftclick:
+	if {telebow::%player%} isn't set:
+		stop
+	if {telearrow::%player%} isn't on ground:
+		stop
+	if player's tool isn't bow:
+		stop
+	delete {telebow::%player%}
+	play 1 of flash at location of player
+	teleport player to {telearrow::%player%}
+	play 1 of flash at location of player
+	play sound "entity.enderman.teleport" with pitch 2 at {telearrow::%player%}
+	kill {telearrow::%player%}
+	while true:
+		add -1 to {telecool::%player%}
+		if {telecool::%player%} < -0.5:
+			message "&b이제 화살 텔레포트를 사용할 수 있습니다!" to player
+			delete {telecool::%player%}
+			stop
+		if player's tool is bow:
+			send action bar "&c화살 텔레포트 남은 시간: %{telecool::%player%}%" to player
+		wait 1 seconds
+
+command /g [<text>]:
+	trigger:
+		goback(player, arg 1)
+		
+
+every a tick:
+	loop all players:
+		set {location::%loop-player%} to loop-player's location
+		
+	loop all players:
+		if {1::%loop-player%} is set:
+			play 100 of dust using dustOption(lime, 1) at loop-player offset by vector(2, 0, 0) with extra 0.5 for all players
+	
+		if {2::%loop-player%} is set:
+			play 100 of dust using dustOption(lime, 1) at loop-player offset by vector(0, 0, 2) with extra 0.5 for all players
+		if {3::%loop-player%} is set:
+			play 5 of explosion_emitter at loop-player
+			play sound "entity.generic.explode" with volume 1 and pitch 1 at loop-player
+
+
+
+function goback(p: player, arg 1: text):
+	if {alre::%{_p}%} is not set:
+		if {loc::%{_p}%} is set:
+			if {AI::*} contains {_p}:
+				if block at {loc::%{_p}%} is not air or large fern or tall grass or water or flowers or redstone wire or short grass or dead grass or signs or doors or trapdoors or sweet berries or banners or cake or buttons or torches or tripwire hook or seagrass or rails or fence gates:
+					if {_arg 1} is not "confirm":
+						message "&c귀환 위치에 블럭이 설치되어 있습니다" to {_p}
+						message "&c가기 위해서는 /g confirm을 사용하세요" to {_p}
+						message "블럭: %block at {loc::%{_p}%}%" to {_p}
+						stop
+				set {wait::%{_p}%} to {_p}'s location
+				set {alre::%{_p}%} to true
+				play sound "block.beacon.activate" with volume 1 and pitch 0 for all players
+				set {dx::%{_p}%} to ceil(x coord of {_p}'s location)
+				set {dz::%{_p}%} to ceil(z coord of {_p}'s location)
+				teleport {_p} to {wait::%{_p}%}
+				loop 240 times:
+					delete {rfly::%{_p}%}
+					if {w::%{_p}%} is set:
+						teleport {_p} to {wait::%{_p}%}
+						play sound "block.beacon.deactivate" with volume 5 and pitch 0 for all players
+						remove levitation from {_p}
+						delete {1::%{_p}%}
+						delete {2::%{_p}%}
+						delete {3::%{_p}%}
+						wait 3 seconds
+						stop this loop
+					else if {d::%{_p}%} is set:
+						teleport {_p} to {wait::%{_p}%}
+						play sound "block.beacon.deactivate" with volume 5 and pitch 0 for all players
+						remove levitation from {_p}
+						delete {1::%{_p}%}
+						delete {2::%{_p}%}
+						delete {3::%{_p}%}
+						wait 10 seconds
+						stop this loop
+					
+					
+					set {ex::%{_p}%} to ceil(x coord of {location::%{_p}%})
+					set {ez::%{_p}%} to ceil(z coord of {location::%{_p}%})
+					
+					
+					if {ex::%{_p}%} is not {dx::%{_p}%}:
+						teleport {_p} to {wait::%{_p}%}
+						play sound "block.beacon.deactivate" with volume 5 and pitch 0 for all players
+						remove levitation from {_p}
+						delete {1::%{_p}%}
+						delete {2::%{_p}%}
+						delete {3::%{_p}%}
+						wait 3 seconds
+						stop this loop
+						
+					if {ez::%{_p}%} is not {dz::%{_p}%}:
+						teleport {_p} to {wait::%{_p}%}
+						play sound "block.beacon.deactivate" with volume 5 and pitch 0 for all players
+						remove levitation from {_p}
+						delete {1::%{_p}%}
+						delete {2::%{_p}%}
+						delete {3::%{_p}%}
+						wait 3 seconds
+						stop this loop
+					
+					play 500 of dust using dustOption(light blue, 1) at {loc::%{_p}%} offset by vector(0, 10, 0) with extra 0.5 for all players
+					
+					play 50 of dust using dustOption(black, 1) at {loc::%{_p}%} offset by vector(0.5, 0, 0.5) with extra 0.5 for all players
+					
+					if loop-number is 1:
+						apply potion of levitation of tier 3 without any particles to {_p} for 3 seconds
+						send action bar "13" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 2 at {loc::%{_p}%}
+					if loop-number is 20:
+						send action bar "12" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 40:
+						send action bar "11" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 60:
+						send action bar "10" to {_p}
+						apply potion of levitation of tier 256 without any particles to {_p} for 9 days
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number > 60:
+						apply potion of levitation of tier 256 without any particles to {_p} for 9 days
+					if loop-number is 80:
+						send action bar "9" to {_p}
+						set {1::%{_p}%} to true
+						play sound "block.respawn_anchor.charge" with volume 1 and pitch 1 at {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 100:
+						send action bar "8" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 120:
+						send action bar "7" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+						set {2::%{_p}%} to true
+						play sound "block.respawn_anchor.charge" with volume 1 and pitch 1 at {_p}
+					if loop-number is 140:
+						send action bar "6" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 160:
+						send action bar "5" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+						delete {1::%{_p}%}
+						delete {2::%{_p}%}
+						play sound "block.respawn_anchor.set_spawn" with volume 1 and pitch 1 at {_p}
+						play 3000 of enchant at {_p} offset by vector(2, 0, 2) with extra 0.5 for all players
+					if loop-number is 180:
+						send action bar "4" to {_p}
+						set {3::%{_p}%} to true
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 200:
+						send action bar "3" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 220:
+						send action bar "2" to {_p}
+						play sound "entity.zombie_villager.converted" with volume 1 and pitch 1 at {loc::%{_p}%}
+					if loop-number is 240:
+						send action bar "1" to {_p}
+						delete {3::%{_p}%}
+						strike lightning effect at {_p}
+						teleport {_p} to {loc::%{_p}%}
+						remove levitation from {_p}
+						loop {gobackcool} times:
+							wait a seconds 
+				
+					wait a tick
+				
+				delete {dx::%{_p}%}
+				delete {dy::%{_p}%}
+				delete {dz::%{_p}%}
+				delete {alre::%{_p}%}
+				if {wardloc::%{_p}%} is set:
+					set {loc::%{_p}%} to {wardloc::%{_p}%}
+					delete {wardloc::%{_p}%}
+			else:
+				message "이 명령어를 사용할 권한이 없습니다!" to {_p}
+				
+		else:
+			message "귀환할 장소가 없습니다!" to {_p}
+	else:
+		message "아직 쿨타임이 끝나지 않았습니다!" to {_p}
